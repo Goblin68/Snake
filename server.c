@@ -17,7 +17,34 @@
 #define FALSE 0
 
 #define Snak '+'
+    
 int SnakNum, Snakx, Snaky;
+typedef struct link {
+	int x ,y ;
+	struct link *next ;
+} *link_P;
+
+link_P append (link_P head, int x, int y ){
+	link_P link_new = malloc(sizeof(struct link));
+	link_new -> x = x ;
+	link_new -> y = y ;
+	link_new -> next = head ;
+	return link_new ;
+}
+
+void pop (link_P head){
+	link_P current = head ;
+	link_P prev = NULL ;
+
+	while(current -> next != NULL){
+		prev = current ;
+		current = current -> next ;
+
+	}
+	prev -> next = NULL ;
+	free(current) ;
+
+}
 
 typedef struct {
     int conx;
