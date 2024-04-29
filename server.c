@@ -15,36 +15,180 @@
 #define SIZE   1024
 #define TRUE 1
 #define FALSE 0
+// gameplay
+#define HIGH 23
+#define WIDE 80
 
-#define Snak '+'
+#define SNAK '&'
+#define SNEK 'O'
+
+#define REDO 'r'
+#define QUIT 'q'
+
+#define FORE 'w'
+#define BACK 's'
+#define LEFT 'a'
+#define RITE 'd'
     
 int SnakNum, Snakx, Snaky;
-typedef struct link {
-	int x ,y ;
-	struct link *next ;
-} *link_P;
 
-link_P append (link_P head, int x, int y ){
-	link_P link_new = malloc(sizeof(struct link));
-	link_new -> x = x ;
-	link_new -> y = y ;
-	link_new -> next = head ;
-	return link_new ;
+typedef struct SnakeSegment {
+    int x;
+    int y;
+    struct SnakeSegment* next;
+} SnakeSegment;
+
+typedef struct {
+    int food_x;
+    int food_y;
+    SnakeSegment* head;
+    int score;
+} GameState ;
+
+
+void generateFoodPosition(GameState* state) {
+    state->food_x = rand() % WIDE;
+    state->food_y = rand() % HIGH;
 }
 
-void pop (link_P head){
-	link_P current = head ;
-	link_P prev = NULL ;
+void initGameState(GameState* state) {
+    // Initialize food position
+    generateFoodPosition(state);
 
-	while(current -> next != NULL){
-		prev = current ;
-		current = current -> next ;
+    // Initialize snake (empty)
+    state->head = malloc(sizeof(SnakeSegment));
+    state->head->x = WIDE / 2;
+    state->head->y = HIGH / 2;
 
-	}
-	prev -> next = NULL ;
-	free(current) ;
-
+    // Initialize score
+    state->score = 0;
 }
+
+void render(GameState* state) {
+
+    char board[HIGH][WIDE];
+    for (int y = 0; y < HIGH; y++) {
+        for (int x = 0; x < WIDE; x++) {
+            if (y == 0){
+                board[y][x] = '-';
+            }
+            else if (y == HIGH - 1){
+                board[y][x] = '-';
+            }
+            else if (x == 0){
+                board[y][x] = '|';
+            }
+            else if (x == WIDE - 1){
+                board[y][x] = '|';
+            }
+            else{
+                board[y][x] = ' ';
+            }
+        }
+        
+    }
+    board[state->food_y][state->food_x] = SNAK;
+    
+    SnakeSegment* current = state->head;
+    while (current != NULL) {
+        board[current->y][current->x] = SNEK;
+        current = current->next;
+        
+    }
+    for (int y = 0; y < HIGH; y++) {
+        for (int x = 0; x < WIDE; x++) {
+            printf("%c", board[y][x]);
+        }
+        printf("%d\n", y);
+    }
+    printf("finished rendering");
+    fflush(stdout);
+}
+
+void addToSnakeHead(GameState* state, int x, int y) {
+    printf("Adding to head");
+    fflush(stdout);
+    SnakeSegment* new_head = (SnakeSegment*)malloc(sizeof(SnakeSegment));
+    new_head->x = x;
+    new_head->y = y;
+    new_head->next = state->head;
+    state->head = new_head;
+    printf("finished adding to head");
+    fflush(stdout);
+}
+
+void removeFromSnakeTail(GameState* state) {
+    if (state->head == NULL) return;
+
+    SnakeSegment* current = state->head;
+    SnakeSegment* prev = NULL;
+
+    // Traverse the linked list to find the last element
+    while (current->next != NULL) {
+        prev = current;
+        current = current->next;
+    }
+
+    // Free the last segment and update the tail pointer
+    if (prev != NULL) {
+        prev->next = NULL;
+        free(current);
+    } else {
+        free(state->head);
+        state->head = NULL;
+    }
+}
+
+void updateGameState(GameState* state, char* direction) {
+    // Move the snake based on user input
+    printf("start update");
+    fflush(stdout);
+    switch (direction[0]) {
+        case 'w': // Up
+            addToSnakeHead(state, state->head->x, state->head->y - 1);
+            break;
+        case 's': // Down
+            addToSnakeHead(state, state->head->x, state->head->y + 1);
+            break;
+        case 'a': // Left
+            addToSnakeHead(state, state->head->x - 1, state->head->y);
+            break;
+        case 'd': // Right
+            addToSnakeHead(state, state->head->x + 1, state->head->y);
+            break;
+        default:
+            // Invalid input or no input
+            return;
+    }
+    printf("finsihed moving");
+    fflush(stdout);
+    // Check for collision with food
+    if (state->head->x == state->food_x && state->head->y == state->food_y) {
+        // If the snake's head is at the same position as the food,
+        // increase the score, generate a new food position, and
+        // add a new segment to the snake's head
+        state->score++;
+        printf("before food");
+        fflush(stdout);
+        generateFoodPosition(state);
+        printf("after food");
+        fflush(stdout);
+    } else {
+        // If no collision with food, remove the last segment from the snake's tail
+        printf("before remove");
+        fflush(stdout);
+        removeFromSnakeTail(state);
+        printf("after remove");
+        fflush(stdout);
+    }
+
+    // Update other game state (e.g., check for collisions with walls or itself)
+    // This part would depend on the specific rules of the game.
+    printf("finished updating");
+    fflush(stdout);
+}
+
+
 
 typedef struct {
     int conx;
@@ -121,10 +265,30 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
+    srand(time(NULL));
+
+    // Initialize game state
+    GameState state;
+    initGameState(&state);
+
+    // Generate initial food position
+    generateFoodPosition(&state);
+
     while (TRUE){        
-            
-            printf("%s\n", buff) ;
-            sleep(1) ;
+        
+        render(&state);
+        // Update game state based on user input
+        updateGameState(&state, buff);
+
+        // Render the game (not implemented in this example)
+
+        // Example: Print snake head position, food position, and score
+        printf("Snake Head: (%d, %d)\n", state.head->x, state.head->y);
+        
+        printf("Food Position: (%d, %d)\n", state.food_x, state.food_y);
+        printf("Score: %d\n", state.score);
+        fflush(stdout);
+        sleep(1) ;
         
             
     
